@@ -9,17 +9,17 @@ using MediatR;
 using Domain.Enum;
 
 namespace Application.UserCQ.Handlers {
-    public class CreateUserCommandHandler(TasksDbContext context, IMapper mapper, IAuthService authService) : IRequestHandler<CreateUserCommand, ResponseBase<UserInfoViewModel?>> {
+    public class CreateUserCommandHandler(TasksDbContext context, IMapper mapper, IAuthService authService) : IRequestHandler<CreateUserCommand, ResponseBase<RefreshTokenViewModel?>> {
         private readonly TasksDbContext _context = context;
         private readonly IMapper _mapper = mapper;
         private readonly IAuthService _authService = authService;
 
-        public async Task<ResponseBase<UserInfoViewModel>> Handle(CreateUserCommand request, CancellationToken cancellationToken) {
+        public async Task<ResponseBase<RefreshTokenViewModel>> Handle(CreateUserCommand request, CancellationToken cancellationToken) {
             #region Validação de email e username unique
             var isUniqueEmailAndUsername = _authService.IsUniqueEmailAndUsername(request.Email!, request.Username!);
 
             if (isUniqueEmailAndUsername is ValidationFieldsUserEnum.UsernameAndEmailUnavailable) {
-                return new ResponseBase<UserInfoViewModel> {
+                return new ResponseBase<RefreshTokenViewModel> {
                     ResponseInfo = new() {
                         Title = "Username e email indisponíveis!",
                         ErrorDescription = $"O username {request.Username} e o email {request.Email} já estão sendo utilizados. Tente utilizar outros.",
@@ -30,7 +30,7 @@ namespace Application.UserCQ.Handlers {
             }
 
             if (isUniqueEmailAndUsername is ValidationFieldsUserEnum.UsernameUnavailable) {
-                return new ResponseBase<UserInfoViewModel> { 
+                return new ResponseBase<RefreshTokenViewModel> { 
                     ResponseInfo = new() {
                         Title = "Username indisponível!",
                         ErrorDescription = $"O username {request.Username} já está sendo utilizado. Tente utilizar outro.",
@@ -41,7 +41,7 @@ namespace Application.UserCQ.Handlers {
             }
 
             if (isUniqueEmailAndUsername is ValidationFieldsUserEnum.EmailUnavailable) {
-                return new ResponseBase<UserInfoViewModel> {
+                return new ResponseBase<RefreshTokenViewModel> {
                     ResponseInfo = new() {
                         Title = "Email indisponível!",
                         ErrorDescription = $"O Email {request.Email} já está sendo utilizado. Tente utilizar outro.",
@@ -60,13 +60,13 @@ namespace Application.UserCQ.Handlers {
             _context.Users.Add(user);
             _context.SaveChanges();
 
-            var userInfoVM = _mapper.Map<UserInfoViewModel>(user);
+            var refreshTokenoVM = _mapper.Map<RefreshTokenViewModel>(user);
             // Aqui o TokenJWT é null, conforme mapping acima. Logo, vamos atualizar chamando o método da dependência de authService
-            userInfoVM.TokenJWT = _authService.GenerateJWT(user.Email!, user.Username!);
+            refreshTokenoVM.TokenJWT = _authService.GenerateJWT(user.Email!, user.Username!);
 
-            return new ResponseBase<UserInfoViewModel>() {
+            return new ResponseBase<RefreshTokenViewModel>() {
                 ResponseInfo = null,
-                Value = userInfoVM
+                Value = refreshTokenoVM
             };
         }
     }

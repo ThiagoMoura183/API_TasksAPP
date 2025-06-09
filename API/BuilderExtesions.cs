@@ -50,6 +50,12 @@ namespace API {
                     ValidAudience = configuration["JWT:Audience"],
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["JWT:Key"]!))
                 };
+            })
+            .AddCookie(options => { 
+                options.Cookie.HttpOnly = true;
+                options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // Requer que todas as páginas/requisições sejam feitas a partir de HTTPS, e não HTTP
+                options.Cookie.SameSite = SameSiteMode.Strict; // Isso define que o cookie enviado só será aceito se a origem for o mesmo site da onde definiu o cookie (e não de terceiros)
+                options.ExpireTimeSpan = TimeSpan.FromDays(7);
             });
         }
 

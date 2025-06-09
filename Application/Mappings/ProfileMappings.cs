@@ -10,9 +10,10 @@ public class ProfileMappings : Profile {
             .ForMember(x => x.RefreshToken, x => x.AllowNull())
             .ForMember(x => x.RefreshTokenExpirationTime, x => x.MapFrom(x => AddTenDays()))
             .ForMember(x => x.PasswordHash, x => x.AllowNull());
-        CreateMap<User, UserInfoViewModel>()
+        CreateMap<User, RefreshTokenViewModel>()
             // Pelo fato do ProfileMapping não ser possível realizar injeção de dependência do authService, vamos permitir nulo e alterar o valor no Handler
             .ForMember(x => x.TokenJWT, x => x.AllowNull());
+        CreateMap<RefreshTokenViewModel, UserInfoViewModel>();
     }
 
     private DateTime AddTenDays() { return DateTime.Now.AddDays(10); }
