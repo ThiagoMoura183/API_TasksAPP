@@ -48,6 +48,7 @@ namespace Application.UserCQ.Handlers {
             _ = int.TryParse(_configuration["JWT:RefreshTokenExpirationTimeInDays"], out int refreshTokenExpirationTimeInDays);
             user.RefreshToken = _authService.GenerateRefreshToken();
             user.RefreshTokenExpirationTime = DateTime.Now.AddDays(refreshTokenExpirationTimeInDays);
+            _context.Update(user);
             _context.SaveChanges(); // Atualiza as informações de refreshToken no banco, conforme alterações acima
 
             RefreshTokenViewModel refreshTokenVM = _mapper.Map<RefreshTokenViewModel>(user);
