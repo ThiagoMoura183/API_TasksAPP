@@ -24,7 +24,7 @@ namespace API.Controllers {
         /// <remarks>
         /// Exemplo de request:
         /// ```
-        /// POST /User/Create-User 
+        /// POST /Auth/Create-User 
         /// {
         ///   "name": "Thiago",
         ///   "surname": "Moura",
@@ -73,6 +73,56 @@ namespace API.Controllers {
         [HttpPost("Login")]
         public async Task<ActionResult<ResponseBase<UserInfoViewModel>>> Login(LoginUserCommand command) {
             var request = await _mediator.Send(command);
+
+            if (request.ResponseInfo is null) {
+                var userInfo = request.Value;
+
+                if (userInfo is not null) {
+                    var cookieOptionsToken = new CookieOptions {
+                        HttpOnly = true,
+                        Secure = true,
+                        Expires = DateTimeOffset.UtcNow.AddDays(7)
+                    };
+
+                    _ = int.TryParse(_configuration["JWT:RefreshTokenExpirationTimeInDays"], out int refreshTokenExpirationTimeInDays);
+
+                    var cookieOptionsRefreshToken = new CookieOptions {
+                        HttpOnly = true,
+                        Secure = true,
+                        Expires = DateTimeOffset.UtcNow.AddDays(refreshTokenExpirationTimeInDays)
+                    };
+
+                    Response.Cookies.Append("jwt", request.Value!.TokenJWT!, cookieOptionsToken);
+                    Response.Cookies.Append("refreshToken", request.Value!.RefreshToken!, cookieOptionsRefreshToken);
+
+                    return Ok(_mapper.Map<UserInfoViewModel>(request.Value));
+                }
+            }
+
+            return BadRequest(request);
+        }
+
+
+        /// <summary>
+        /// Rota responsável por atualizar o RefreshToken do usuário, baseado no Username enviado
+        /// </summary>
+        /// <remarks>
+        /// Exemplo de request:
+        /// ```
+        /// POST /Auth/RefreshToken
+        /// {
+        ///   "username": "ThiMoura",
+        ///   "refreshToken": null
+        /// }
+        /// ```
+        /// </remarks>
+        [HttpPost("RefreshToken")]
+        public async Task<ActionResult<ResponseBase<UserInfoViewModel>>> RefreshToken(RefreshTokenCommand command) {
+            // Precisamos recuperar o refreshToken dos cookies, já que pelo JS está inacessível (HTTPOnly)
+            var request = await _mediator.Send(new RefreshTokenCommand {
+                Username = command.Username,
+                RefreshToken = Request.Cookies["refreshToken"]
+            });
 
             if (request.ResponseInfo is null) {
                 var userInfo = request.Value;
