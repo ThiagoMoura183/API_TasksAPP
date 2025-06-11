@@ -4,13 +4,13 @@ using Application.UserCQ.ViewModels;
 using AutoMapper;
 using Domain.Abstractions;
 using Domain.Entity;
-using Infra.Persistency;
-using MediatR;
 using Domain.Enum;
+using Infra.Repository.UnitOfWork;
+using MediatR;
 
 namespace Application.UserCQ.Handlers {
-    public class CreateUserCommandHandler(TasksDbContext context, IMapper mapper, IAuthService authService) : IRequestHandler<CreateUserCommand, ResponseBase<RefreshTokenViewModel?>> {
-        private readonly TasksDbContext _context = context;
+    public class CreateUserCommandHandler(IUnitOfWork unitOfWork, IMapper mapper, IAuthService authService) : IRequestHandler<CreateUserCommand, ResponseBase<RefreshTokenViewModel?>> {
+        private readonly IUnitOfWork _unitOfWork = unitOfWork;
         private readonly IMapper _mapper = mapper;
         private readonly IAuthService _authService = authService;
 
@@ -57,8 +57,8 @@ namespace Application.UserCQ.Handlers {
             user.RefreshToken = _authService.GenerateRefreshToken();
             user.PasswordHash = _authService.HashingPassword(request.Password!);
 
-            _context.Users.Add(user);
-            _context.SaveChanges();
+            await _unitOfWork.UserRepository.Create(user);
+            _unitOfWork.Commit();
 
             var refreshTokenoVM = _mapper.Map<RefreshTokenViewModel>(user);
             // Aqui o TokenJWT é null, conforme mapping acima. Logo, vamos atualizar chamando o método da dependência de authService

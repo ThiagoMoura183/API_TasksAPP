@@ -3,20 +3,19 @@ using Application.UserCQ.Commands;
 using Application.UserCQ.ViewModels;
 using AutoMapper;
 using Domain.Abstractions;
-using Infra.Persistency;
+using Infra.Repository.UnitOfWork;
 using MediatR;
 using Microsoft.Extensions.Configuration;
-using System.Reflection.Metadata.Ecma335;
 
 namespace Application.UserCQ.Handlers {
-    public class RefreshTokenCommandHandler(TasksDbContext context, IAuthService authService, IConfiguration configuration, IMapper mapper) : IRequestHandler<RefreshTokenCommand, ResponseBase<RefreshTokenViewModel>> {
-        private readonly TasksDbContext _context = context;
+    public class RefreshTokenCommandHandler(IUnitOfWork unitOfWork, IAuthService authService, IConfiguration configuration, IMapper mapper) : IRequestHandler<RefreshTokenCommand, ResponseBase<RefreshTokenViewModel>> {
+        private readonly IUnitOfWork _unitOfWork = unitOfWork;
         private readonly IAuthService _authService = authService;
         private readonly IConfiguration _configuration = configuration;
         private readonly IMapper _mapper = mapper;
 
         public async Task<ResponseBase<RefreshTokenViewModel>> Handle(RefreshTokenCommand request, CancellationToken cancellationToken) {
-            var user = _context.Users.FirstOrDefault(u => u.Username == request.Username);
+            var user = await _unitOfWork.UserRepository.Get(u => u.Username == request.Username);
 
             if (user is null || user.RefreshToken != request.RefreshToken || user.RefreshTokenExpirationTime < DateTime.Now) {
                 return new ResponseBase<RefreshTokenViewModel>() {
@@ -33,8 +32,9 @@ namespace Application.UserCQ.Handlers {
             _ = int.TryParse(_configuration["JWT:RefreshTokenExpirationTimeInDays"], out int refreshTokenExpirationTimeInDays);
             user.RefreshToken = _authService.GenerateRefreshToken();
             user.RefreshTokenExpirationTime = DateTime.Now.AddDays(refreshTokenExpirationTimeInDays);
-            _context.Update(user);
-            _context.SaveChanges();
+
+            await _unitOfWork.UserRepository.Update(user);
+            _unitOfWork.Commit();
 
             RefreshTokenViewModel refreshTokenVM = _mapper.Map<RefreshTokenViewModel>(user);
             refreshTokenVM.TokenJWT = _authService.GenerateJWT(user.Email!, user.Username!);

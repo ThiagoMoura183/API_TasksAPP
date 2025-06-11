@@ -5,6 +5,9 @@ using Domain.Abstractions;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Infra.Persistency;
+using Infra.Repository.IRepositories;
+using Infra.Repository.Repositories;
+using Infra.Repository.UnitOfWork;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -81,6 +84,11 @@ namespace API {
 
         public static void AddInjections(this WebApplicationBuilder builder) {
             builder.Services.AddScoped<IAuthService, AuthService>();
+        }
+
+        public static void AddRepositories(this WebApplicationBuilder builder) {
+            builder.Services.AddScoped<IUserRepository, UserRepository>();
+            builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
         }
     }
 }
